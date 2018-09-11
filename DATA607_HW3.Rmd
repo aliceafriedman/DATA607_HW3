@@ -1,0 +1,256 @@
+---
+title: "DATA607_HW3"
+author: "Alice Friedman"
+date: "9/10/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+  
+####Setup
+```{r}
+#Remove all variables from the global enviroment
+remove(list = ls())
+#Install and load stringr pacakge
+library(stringr)
+```
+
+## Question 3
+###Part 1: Rearrange the names vector so that all elements conform to "first_name last_name" 
+####Step 1: Assign target string to variable, raw.data
+```{r}
+raw.data <-"555-1239Moe Szyslak(636) 555-0113Burns, C. Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson, Homer5553642Dr. Julius Hibbert"
+
+```
+  
+  
+####Step 2: Find locations of names wihtin raw.data using reg. expression
+```{r}
+names_raw_loc <- unlist(str_locate_all(raw.data, "[[:alpha:]., ]{2,}"))
+```
+  
+  
+####Step 3: Use WHILE statement to extract each names as a separate list item
+```{r}
+names_raw_list <- list()
+i <- 1
+j <- length(names_raw_loc)/2+1
+while(j <= length(names_raw_loc)){
+  names_raw_list <- append(names_raw_list, str_sub(raw.data, start=names_raw_loc[i], end=names_raw_loc[j]))
+  i <- i+1 
+  j <- j+1
+}
+names_raw_list
+```
+  
+####Step 4: Separate names that already meet condition from names that need to be swapped
+```{r}
+#generate the empty lists
+first_last_names <- list()
+last_first_names <- list()
+
+#use a while statment to populate each list based on condition
+i <- 1
+while(i <= length(names_raw_list)){
+  if(str_detect(names_raw_list[i], "\\w+ \\w")){
+    first_last_names <- append(first_last_names, names_raw_list[i])
+  }else{
+    last_first_names <- append(last_first_names, names_raw_list[i])
+  }
+  i <- i+1 
+}
+
+#print results
+print("List of Correctly Formatted Names")
+first_last_names
+print("List of Names Formatted Last Name First")
+last_first_names
+```
+
+####Step 5: Reformat the reversed names
+```{r}
+#Use a while statement to reformat each item in the list
+i <- 1
+while(i <= length(last_first_names)){
+  last <- str_extract(last_first_names[i],"\\w+,")
+  last <- str_sub(last, 1, -2)
+  first <- str_extract(last_first_names[i],", \\w+(.)?( \\w+)?")
+  first <- str_sub(first, 3, -1)  
+  last_first_names[i] <- str_c(first," ",last)
+  first_last_names <- append(first_last_names, last_first_names[i])
+  i <- i+1 
+}
+
+#print results
+print("Complete List of Correctly Formatted Names")
+first_last_names
+```
+  
+
+###Question 3, Part 2 
+Construct a logical vector indicating whether the character has a title, e.g., "Rev."
+```{r}
+#logical test if a string has a title
+title_test <- function(string){
+  str_detect(string,"[[:alpha:]]{2,}[.] [[:alpha:]]+ [[:alpha:]]+")
+}
+#apply test to list of names
+title_list <- lapply(first_last_names, function(x) title_test(x))
+
+#convert to data frame for east viewing of results
+title_vector <- as.vector(unlist(title_list)) #techinically this vector satisfies the question
+names_vector <- as.vector(unlist(first_last_names))
+df_title_test <- data.frame("Names" = names_vector,"Title.Test"= title_vector)
+df_title_test
+```
+  
+
+###Question 3,Part 3 
+Construct a logical vector indicating whether the character has a second name, e.g, "C. Montgomery"
+```{r}
+#Note: The following test assumes the question refers to a character having two first names or a first and middle name
+
+#logical test if a string has 2 names
+two_name_test <- function(string){  
+  str_detect(string,"(^[[:alpha:]]\\. |^[[:alpha:]]+ )[[:alpha:]]+ [[:alpha:]]+")
+}
+
+#apply test to list of names
+two_names_list <- lapply(first_last_names, function(x) two_name_test(x))
+
+#convert to data frame for east viewing of results
+two_names_vector <- as.vector(unlist(two_names_list)) #techinically this vector satisfies the question
+names_vector <- as.vector(unlist(first_last_names))
+df_two_names_test <- data.frame("Names" = names_vector,"Second.Name.Test"= two_names_vector)
+df_two_names_test
+```
+
+
+##Question 4 
+Describe the types of strings that conform to each of the following regular expressions an construct an example that is matched by the regular expression
+
+  
+####1. [0-9]+\\\\$
+This regular expression (regex) refers to an integer of any length, endinging in a dollar sign.
+
+Conforming examples:
+
+* 1$
+
+* 12093810848726343091204920394928$
+
+Non-conforming examples:
+
+* $1.0 
+
+```{r}
+str_extract_all("1$","[0-9]+\\$")
+str_extract_all("12093810848726343091204920394928$","[0-9]+\\$")
+str_extract_all("$1.0","[0-9]+\\$")
+```
+
+  
+####2. \\\\b[a-z]{1,4}\\\\b
+This regex will match any string of between one and four lowercase letters that are bounded on both sides by a space or punctuation character. Uppercase strings, longer strings or digits will not match.
+
+Conforming examples:
+
+* aaaa
+
+* a
+
+Non-conforming examples:
+
+* aaaaa
+
+* Alice
+
+```{r}
+str_extract_all("aaaa.aa aaaa a abc.444", "\\b[a-z]{1,4}\\b")
+str_detect("AB", "\\b[a-z]{1,4}\\b")
+str_detect("aaaaa", "\\b[a-z]{1,4}\\b")
+```
+
+  
+####3. \.*?\\\\.txt$
+  
+This regex will match a character string, with no spaces, of any length that ends in "\.txt". This would be useful in finding text files!
+
+Conforming examples:
+
+* bob.txt
+
+* \.txt
+
+```{r}
+str_detect("bob.txt", ".*?\\.txt$")
+str_detect(".txt", ".*?\\.txt$")
+str_detect("bob.jpg", ".*?\\.txt$")
+```
+  
+
+####4. \\\\d{2}/\\\\d{2}/\\\\d{4}
+This regex would be useful to recognize dates formated MM/DD/YYYY (or DD/MM/YYYY), but any two digits followed by a slash followed by any two digits followed by a slash followed by four digits would conform. It wouldn't rule out nonsensical dates like 99/99/0000, for example.
+
+Conforming examples:
+
+* 12/31/2015
+
+* 99/99/0000
+
+Non-conforming examples:
+
+* 12/31/15
+
+* -aa/bb/3214
+
+```{r}
+str_detect("12/31/2015", "\\d{2}/\\d{2}/\\d{4}")
+str_detect("99/99/0000", "\\d{2}/\\d{2}/\\d{4}")
+str_detect("12/31/15", "\\d{2}/\\d{2}/\\d{4}")
+str_detect("-aa/bb/3214", "\\d{2}/\\d{2}/\\d{4}")
+```
+  
+
+####5. <(.+?)>.+?</\\1>
+This regex matches an optional string of any length enclosed in greater than/less than tags, where the same enclosed text must repeat in the backreferenced tags at the end. A character string of any length can be between the tags, but no spaces. 
+
+This regex would be useful in finding certain kinds of html tags.
+
+Conforming examples:
+
+* \<abcdef\>123\</abcdef\>
+
+* \<strong\>bold....\</strong\>
+
+Non-conforming examples:
+
+* \<a href="link"\>linked\</a\>
+
+* \<\>123\</\>
+
+Although the string inside the first set of tags is marked as optional, because it is backreferenced later in the regex, if that is left blank the string will not match.
+```{r}
+str_detect("<abcdef>123</abcdef>", "<(.+?)>.+?</\\1>")
+str_detect("<strong>bold....</strong>", "<(.+?)>.+?</\\1>")
+str_detect('<a href="link">linked</a>', "<(.+?)>.+?</\\1>")
+str_detect("<>123</>", "<(.+?)>.+?</\\1>")
+```
+
+##Question 9
+Decode the secret message hidden in the string.   
+```{r}
+str <- "clcopCow1zmstc0d87wnkig7OvdicpNuggvhryn92Gjuwczi8hqrfpRxs5Aj5dwpn0TanwoUwisdij7Lj8kpf03AT5Idr3coc0bt7yczjatOaootj55t3Nj3ne6c4Sfek.r1w1YwwojigO
+d6vrfUrbz2.2bkAnbhzgv4R9i05zEcrop.wAgnb.SqoU65fPa1otfb7wEm24k6t3sR9zqe5
+fy89n6Nd5t9kc4fE905gmc4Rgxo5nhDk!gr"
+
+#I guessed the code by eyeballing it in the book. Too many word search games, I guess!
+secret_message <- str_extract_all(str,"([[:upper:]])")
+
+secret_message
+#Note: Yes. Yes, I am.
+```
+  
+  
